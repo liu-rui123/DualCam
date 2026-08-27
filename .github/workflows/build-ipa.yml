@@ -1,0 +1,47 @@
+name: Build DualCam IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle_id:
+        description: Bundle ID
+        required: true
+        default: com.example.DualCam
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Download project
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Unpack source
+        run: |
+          mkdir source
+          unzip -q DualCam-source.zip -d source
+          test -f source/scripts/build_unsigned_ipa.sh
+
+      - name: Build unsigned IPA
+        env:
+          DUALCAM_BUNDLE_ID: ${{ inputs.bundle_id }}
+        run: |
+          chmod +x source/scripts/build_unsigned_ipa.sh
+          cd source
+          scripts/build_unsigned_ipa.sh "$GITHUB_WORKSPACE/DualCam-unsigned.ipa"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: DualCam-unsigned-ipa
+          path: DualCam-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
